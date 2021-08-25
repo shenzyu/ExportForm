@@ -175,7 +175,7 @@ namespace WindowsFormsApp
                     itemDataTable.Rows.InsertAt(itemDataTable.NewRow(), 1);
                     //标题
                     DataRow titleDr = itemDataTable.NewRow();
-                    titleDr["Name"] = "雪 海 梅 乡 食 品 出 库 单";
+                    titleDr["Id"] = "雪 海 梅 乡 食 品 出 库 单";
                     itemDataTable.Rows.Add(titleDr);
                     //空行
                     itemDataTable.Rows.InsertAt(itemDataTable.NewRow(), 3);
@@ -210,6 +210,12 @@ namespace WindowsFormsApp
                             itemDr["Unit"] = inputModel.Unit;
                             itemDr["Num"] = inputModel.Num;
                             itemDr["Memo"] = string.Empty;
+                            itemDataTable.Rows.Add(itemDr);
+                        }
+                        else
+                        {
+                            DataRow itemDr = itemDataTable.NewRow();
+                            itemDr["Id"] = (i + 1).ToString();
                             itemDataTable.Rows.Add(itemDr);
                         }
                     }
