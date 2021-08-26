@@ -33,6 +33,7 @@
             this.button1 = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.numUpDown = new System.Windows.Forms.NumericUpDown();
+            this.btnDownload = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numUpDown)).BeginInit();
             this.SuspendLayout();
@@ -55,6 +56,7 @@
             this.dataGridView1.RowTemplate.Height = 23;
             this.dataGridView1.Size = new System.Drawing.Size(978, 606);
             this.dataGridView1.TabIndex = 1;
+            this.dataGridView1.RowsAdded += new System.Windows.Forms.DataGridViewRowsAddedEventHandler(this.dataGridView1_RowsAdded);
             // 
             // button1
             // 
@@ -82,11 +84,22 @@
             this.numUpDown.Size = new System.Drawing.Size(54, 21);
             this.numUpDown.TabIndex = 5;
             // 
+            // btnDownload
+            // 
+            this.btnDownload.Location = new System.Drawing.Point(311, 12);
+            this.btnDownload.Name = "btnDownload";
+            this.btnDownload.Size = new System.Drawing.Size(75, 23);
+            this.btnDownload.TabIndex = 6;
+            this.btnDownload.Text = "下载";
+            this.btnDownload.UseVisualStyleBackColor = true;
+            this.btnDownload.Click += new System.EventHandler(this.btnDownload_Click);
+            // 
             // ExcelInputForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(984, 661);
+            this.Controls.Add(this.btnDownload);
             this.Controls.Add(this.numUpDown);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.button1);
@@ -109,6 +122,7 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.NumericUpDown numUpDown;
+        private System.Windows.Forms.Button btnDownload;
     }
 }
 

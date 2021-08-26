@@ -1,4 +1,5 @@
 ﻿using NPOI.SS.UserModel;
+using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,9 @@ namespace WindowsFormsApp
 {
     public partial class ExcelInputForm : Form
     {
-        public DataTable excelDataTable = new DataTable();
+        private DataTable excelDataTable = new DataTable();
+        private DataTable exportDataTable = new DataTable();
+
         public static int lengthLimit = 0;
 
         public ExcelInputForm()
@@ -39,7 +42,7 @@ namespace WindowsFormsApp
 
                 // 取得文件路径及文件名
                 filePath = openFileDialog.FileName;
-
+                excelDataTable.Clear();
                 dataGridView1.DataSource = null;                       // 每次打开清空内容
                 this.excelDataTable = ReadExcelToTable(filePath);      // 读出excel并放入datatable
                 dataGridView1.DataSource = excelDataTable;        // 测试用, 输出到dataGridView
@@ -49,7 +52,6 @@ namespace WindowsFormsApp
         private void button1_Click(object sender, EventArgs e)
         {
 
-            DataTable exportDataTable = new DataTable();
             UpDownBase up = (UpDownBase)numUpDown;
             if (!string.IsNullOrEmpty(up.Text))
             {
@@ -101,38 +103,19 @@ namespace WindowsFormsApp
                     MessageBox.Show("表格数据为空,请确认是否已经导入数据!");
                     return;
                 }
-
+                exportDataTable.Clear();
                 exportDataTable = GetDataTable(excelData);
                 if (exportDataTable.Rows.Count > 0)
                 {
                     dataGridView1.DataSource = null;
                     dataGridView1.DataSource = exportDataTable;
-                    return;
-                }
-
-                var newBook = BuildWorkbook(excelDataTable);
-                SaveFileDialog saveFileDialog = new SaveFileDialog
-                {
-                    Filter = "Files|*.xls;*.xlsx",              // 设定打开的文件类型
-                                                                //openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;                       // 打开app对应的路径
-                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)  // 打开桌面
-                };
-                string path = "";
-
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    path = saveFileDialog.FileName;
                 }
                 else
                 {
-                    return;
-                }
-                using (var fs = File.OpenWrite(path))
-                {
+                    MessageBox.Show("生成失败,请联系开发人员!");
 
-                    newBook.Write(fs);
-                    MessageBox.Show("生成成功");
                 }
+
 
             }
             catch (Exception ex)
@@ -176,6 +159,8 @@ namespace WindowsFormsApp
                     //标题
                     DataRow titleDr = itemDataTable.NewRow();
                     titleDr["Id"] = "雪 海 梅 乡 食 品 出 库 单";
+                    titleDr["Spec"] = null;
+                    titleDr["Unit"] = null;
                     itemDataTable.Rows.Add(titleDr);
                     //空行
                     itemDataTable.Rows.InsertAt(itemDataTable.NewRow(), 3);
@@ -185,6 +170,7 @@ namespace WindowsFormsApp
                     messageDr["Name"] = oList.FirstOrDefault().OpenDate;
                     messageDr["Spec"] = "单位:";
                     messageDr["Unit"] = oList.FirstOrDefault().FormName;
+                    
                     itemDataTable.Rows.Add(messageDr);
 
 
@@ -195,9 +181,11 @@ namespace WindowsFormsApp
                     headDr["Unit"] = "单位";
                     headDr["Num"] = "数量";
                     headDr["Memo"] = "备注";
+                   
                     itemDataTable.Rows.Add(headDr);
-
+                    
                     //数据
+                    var sum = 0;
                     for (int i = 0; i < lengthLimit; i++)
                     {
                         if (oList.Count > (i))
@@ -211,6 +199,8 @@ namespace WindowsFormsApp
                             itemDr["Num"] = inputModel.Num;
                             itemDr["Memo"] = string.Empty;
                             itemDataTable.Rows.Add(itemDr);
+                            Int32.TryParse(inputModel.Num, out int num);
+                            sum = sum + num;
                         }
                         else
                         {
@@ -219,10 +209,32 @@ namespace WindowsFormsApp
                             itemDataTable.Rows.Add(itemDr);
                         }
                     }
+                    //添加合计行
+                    DataRow sumDr = itemDataTable.NewRow();
+                    sumDr["Name"] = "合   计:";
+                    sumDr["Num"] = sum;
+                    itemDataTable.Rows.Add(sumDr);
+
+                    //空行
+                    itemDataTable.Rows.Add(itemDataTable.NewRow());
+                    //经办人
+                    DataRow HandlerDr = itemDataTable.NewRow();
+                    HandlerDr["Name"] = "经办人：";
+                    itemDataTable.Rows.Add(HandlerDr);
+                    //空行
+                    itemDataTable.Rows.Add(itemDataTable.NewRow());
+                    //注:
+                    DataRow needDr = itemDataTable.NewRow();
+                    needDr["Id"] = "注：第一联记帐联；第二联仓库联.";
+                    itemDataTable.Rows.Add(needDr);
+                    //空行
+                    //itemDataTable.Rows.Add(itemDataTable.NewRow());
                     //添加到导出表
                     foreach (DataRow dr in itemDataTable.Rows)
                     {
+                        
                         exportDataTable.ImportRow(dr);
+                       
                     }
                 });
             });
@@ -261,16 +273,65 @@ namespace WindowsFormsApp
         {
             var book = new XSSFWorkbook();
             ISheet sheet = book.CreateSheet("Sheet1");
+
+
+            ICellStyle cellStyle = book.CreateCellStyle();
+
+            cellStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.Thin;
+            cellStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+            cellStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+            cellStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+
             //Data Rows
+            List<int> mergeRowIndex = new List<int>();
+            int borderInt = -1;
+            Boolean isStart = false;
             for (int i = 0; i < dt.Rows.Count; i++)
             {
                 IRow drow = sheet.CreateRow(i);
+                if (isStart)
+                {
+                    if (i - borderInt > 12)
+                    {
+                        borderInt = -1;
+                        isStart = false;
+                    }
+                }
+
+
                 for (int j = 0; j < dt.Columns.Count; j++)
                 {
                     ICell cell = drow.CreateCell(j, CellType.String);
+                    if (dt.Rows[i][j].ToString() == "序号")
+                    {
+                        borderInt = i;
+                        isStart = true;
+                    }
+                    if (dt.Rows[i][j].ToString() == "雪 海 梅 乡 食 品 出 库 单")
+                    {
+                        mergeRowIndex.Add(i);
+                    }
+                    if (i >= borderInt &&   i- borderInt < 12 && isStart)
+                    {
+                        cell.CellStyle = cellStyle;
+                    }
                     cell.SetCellValue(dt.Rows[i][j].ToString());
                 }
+
+                //合并单元格//设置style
+                ICellStyle mergeStyle = book.CreateCellStyle();
+                mergeStyle.VerticalAlignment = VerticalAlignment.Center;
+                mergeStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Left;
+
+                //合并操作
+                mergeRowIndex.ForEach(rowIndex=>{
+                    sheet.AddMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 0, 2));
+                    IRow row = sheet.CreateRow(rowIndex);
+                    ICell cell = row.CreateCell(rowIndex);
+                    cell.CellStyle = mergeStyle;
+                });
             }
+           
             //自动列宽
             for (int i = 0; i <= dt.Columns.Count; i++)
                 sheet.AutoSizeColumn(i, true);
@@ -320,7 +381,39 @@ namespace WindowsFormsApp
         private void ExcelInputForm_Load(object sender, EventArgs e)
         {
 
+            //dataGridView1.RowDataBound += new GridViewRowEventHandler(GridView1_RowDataBound);
 
+        }
+
+        private void btnDownload_Click(object sender, EventArgs e)
+        {
+             
+            var newBook = BuildWorkbook(exportDataTable);
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Files|*.xlsx",              // 设定打开的文件类型
+                                                            //openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;                       // 打开app对应的路径
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)  // 打开桌面
+            };
+            string path = "";
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                path = saveFileDialog.FileName;
+            }
+            else
+            {
+                return;
+            }
+            using (var fs = File.OpenWrite(path))
+            {
+
+                newBook.Write(fs);
+            }
+        }
+
+        private void dataGridView1_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        {
         }
     }
 }
