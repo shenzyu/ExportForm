@@ -283,7 +283,9 @@ namespace WindowsFormsApp
             cellStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
 
             //Data Rows
-            List<int> mergeRowIndex = new List<int>();
+            HashSet<int> mergeRowIndex = new HashSet<int>();
+            HashSet<int> mergeRowIndex1 = new HashSet<int>();
+            HashSet<int> mergeRowIndex2 = new HashSet<int>();
             int borderInt = -1;
             Boolean isStart = false;
             for (int i = 0; i < dt.Rows.Count; i++)
@@ -311,31 +313,84 @@ namespace WindowsFormsApp
                     {
                         mergeRowIndex.Add(i);
                     }
+                    if (dt.Rows[i][j].ToString() == "注：第一联记帐联；第二联仓库联.")
+                    {
+                        mergeRowIndex1.Add(i);
+                    }
+                    if (dt.Rows[i][j].ToString() == "发货日期：")
+                    {
+                        mergeRowIndex2.Add(i);
+                    }
                     if (i >= borderInt &&   i- borderInt < 12 && isStart)
                     {
                         cell.CellStyle = cellStyle;
                     }
-                    cell.SetCellValue(dt.Rows[i][j].ToString());
+                    if (!string.IsNullOrEmpty(dt.Rows[i][j].ToString()))
+                    {
+                        cell.SetCellValue(dt.Rows[i][j].ToString());
+
+                    }
                 }
 
-                //合并单元格//设置style
-                ICellStyle mergeStyle = book.CreateCellStyle();
-                mergeStyle.VerticalAlignment = VerticalAlignment.Center;
-                mergeStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Left;
-
-                //合并操作
-                mergeRowIndex.ForEach(rowIndex=>{
-                    sheet.AddMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 0, 2));
-                    IRow row = sheet.CreateRow(rowIndex);
-                    ICell cell = row.CreateCell(rowIndex);
-                    cell.CellStyle = mergeStyle;
-                });
             }
-           
+
             //自动列宽
             for (int i = 0; i <= dt.Columns.Count; i++)
                 sheet.AutoSizeColumn(i, true);
 
+            //合并单元格//设置style
+            ICellStyle mergeStyle = book.CreateCellStyle();
+            mergeStyle.VerticalAlignment = VerticalAlignment.Center;
+            mergeStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Left;
+
+            ICellStyle mergeCenterStyle = book.CreateCellStyle();
+            mergeCenterStyle.VerticalAlignment = VerticalAlignment.Center;
+            mergeCenterStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+
+            //合并操作
+            foreach (int rowIndex in mergeRowIndex)
+            {
+                sheet.AddMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 0, 2));
+                IRow row = sheet.CreateRow(rowIndex);
+                ICell cell = row.CreateCell(0);
+                cell.CellStyle = mergeStyle;
+                cell.SetCellValue("雪 海 梅 乡 食 品 出 库 单");
+                
+            }
+            //合并操作
+            foreach (int rowIndex in mergeRowIndex1)
+            {
+                sheet.AddMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 0, 2));
+                IRow row = sheet.CreateRow(rowIndex);
+                ICell cell = row.CreateCell(0);
+                cell.CellStyle = mergeStyle;
+                cell.SetCellValue("注：第一联记帐联；第二联仓库联.");
+
+            }
+            //合并操作
+            int idNo = 1;
+            foreach (int rowIndex in mergeRowIndex2)
+            {
+                var value = sheet.GetRow(rowIndex).GetCell(3).ToString();
+                var date = sheet.GetRow(rowIndex).GetCell(1).ToString();
+                sheet.AddMergedRegion(new CellRangeAddress(rowIndex, rowIndex, 3, 4));
+
+                IRow row = sheet.CreateRow(rowIndex);
+                ICell cell = row.CreateCell(3);
+                ICell cellString = row.CreateCell(0);
+                ICell cellDate = row.CreateCell(1);
+                ICell IdCell = row.CreateCell(5);
+
+                cell.CellStyle = mergeStyle;
+                cellString.CellStyle = mergeStyle;
+                cellDate.CellStyle = mergeStyle;
+                IdCell.CellStyle = mergeCenterStyle;
+                cell.SetCellValue(value);
+                cellString.SetCellValue("发货日期：");
+                cellDate.SetCellValue(date);
+                IdCell.SetCellValue(idNo);
+                idNo++;
+            }
             return book;
         }
         private static DataTable ReadExcelToTable(string path)
@@ -380,8 +435,7 @@ namespace WindowsFormsApp
 
         private void ExcelInputForm_Load(object sender, EventArgs e)
         {
-
-            //dataGridView1.RowDataBound += new GridViewRowEventHandler(GridView1_RowDataBound);
+            numUpDown.Value = 10;
 
         }
 
