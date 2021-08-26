@@ -379,15 +379,19 @@ namespace WindowsFormsApp
                 ICell cell = row.CreateCell(3);
                 ICell cellString = row.CreateCell(0);
                 ICell cellDate = row.CreateCell(1);
+                ICell formNameCell = row.CreateCell(2);
                 ICell IdCell = row.CreateCell(5);
 
                 cell.CellStyle = mergeStyle;
                 cellString.CellStyle = mergeStyle;
                 cellDate.CellStyle = mergeStyle;
                 IdCell.CellStyle = mergeCenterStyle;
+                formNameCell.CellStyle = mergeStyle;
+
                 cell.SetCellValue(value);
                 cellString.SetCellValue("发货日期：");
                 cellDate.SetCellValue(date);
+                formNameCell.SetCellValue("单位:");
                 IdCell.SetCellValue(idNo);
                 idNo++;
             }
