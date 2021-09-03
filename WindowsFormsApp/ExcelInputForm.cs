@@ -137,7 +137,7 @@ namespace WindowsFormsApp
             dc = exportDataTable.Columns.Add("Memo", Type.GetType("System.String"));
 
             //1.先根据出库单位分组
-            var valueListGroup = excelData.GroupBy(x => new { x.FormName })
+            var valueListGroup = excelData.GroupBy(x => new { x.FormName,x.OpenDate })
                       .Select(group => group).ToList();
             valueListGroup.ForEach(item =>
             {
@@ -177,7 +177,7 @@ namespace WindowsFormsApp
                     DataRow headDr = itemDataTable.NewRow();
                     headDr["Id"] = "序号";
                     headDr["Name"] = "品名";
-                    headDr["Spec"] = "规格:";
+                    headDr["Spec"] = "规格";
                     headDr["Unit"] = "单位";
                     headDr["Num"] = "数量";
                     headDr["Memo"] = "备注";
