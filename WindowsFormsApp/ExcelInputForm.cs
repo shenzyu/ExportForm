@@ -1,4 +1,5 @@
-﻿using NPOI.SS.UserModel;
+﻿using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
 using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
 using System;
@@ -42,13 +43,19 @@ namespace WindowsFormsApp
 
                 // 取得文件路径及文件名
                 filePath = openFileDialog.FileName;
-                excelDataTable.Clear();
+                excelDataTable?.Clear();
                 dataGridView1.DataSource = null;                       // 每次打开清空内容
-                this.excelDataTable = ReadExcelToTable(filePath);      // 读出excel并放入datatable
+                this.excelDataTable = ExcelToDataTable( filePath,false);      // 读出excel并放入datatable
+                //this.excelDataTable = ReadExcelToTable(filePath);      // 读出excel并放入datatable
                 dataGridView1.DataSource = excelDataTable;        // 测试用, 输出到dataGridView
             }
 
         }
+
+
+
+
+
         private void button1_Click(object sender, EventArgs e)
         {
 
@@ -137,7 +144,7 @@ namespace WindowsFormsApp
             dc = exportDataTable.Columns.Add("Memo", Type.GetType("System.String"));
 
             //1.先根据出库单位分组
-            var valueListGroup = excelData.GroupBy(x => new { x.FormName,x.OpenDate })
+            var valueListGroup = excelData.GroupBy(x => new { x.FormName, x.OpenDate })
                       .Select(group => group).ToList();
             valueListGroup.ForEach(item =>
             {
@@ -170,7 +177,7 @@ namespace WindowsFormsApp
                     messageDr["Name"] = oList.FirstOrDefault().OpenDate;
                     messageDr["Spec"] = "单位:";
                     messageDr["Unit"] = oList.FirstOrDefault().FormName;
-                    
+
                     itemDataTable.Rows.Add(messageDr);
 
 
@@ -181,9 +188,9 @@ namespace WindowsFormsApp
                     headDr["Unit"] = "单位";
                     headDr["Num"] = "数量";
                     headDr["Memo"] = "备注";
-                   
+
                     itemDataTable.Rows.Add(headDr);
-                    
+
                     //数据
                     var sum = 0;
                     for (int i = 0; i < lengthLimit; i++)
@@ -232,9 +239,9 @@ namespace WindowsFormsApp
                     //添加到导出表
                     foreach (DataRow dr in itemDataTable.Rows)
                     {
-                        
+
                         exportDataTable.ImportRow(dr);
-                       
+
                     }
                 });
             });
@@ -321,7 +328,7 @@ namespace WindowsFormsApp
                     {
                         mergeRowIndex2.Add(i);
                     }
-                    if (i >= borderInt &&   i- borderInt < 12 && isStart)
+                    if (i >= borderInt && i - borderInt < 12 && isStart)
                     {
                         cell.CellStyle = cellStyle;
                     }
@@ -355,7 +362,7 @@ namespace WindowsFormsApp
                 ICell cell = row.CreateCell(0);
                 cell.CellStyle = mergeStyle;
                 cell.SetCellValue("雪 海 梅 乡 食 品 出 库 单");
-                
+
             }
             //合并操作
             foreach (int rowIndex in mergeRowIndex1)
@@ -383,8 +390,8 @@ namespace WindowsFormsApp
                 ICell IdCell = row.CreateCell(5);
 
                 cell.CellStyle = mergeStyle;
-                cellString.CellStyle = mergeStyle;
                 cellDate.CellStyle = mergeStyle;
+                cellString.CellStyle = mergeStyle;
                 IdCell.CellStyle = mergeCenterStyle;
                 formNameCell.CellStyle = mergeStyle;
 
@@ -436,6 +443,127 @@ namespace WindowsFormsApp
             }
 
         }
+        /// <summary>  
+        /// 将excel导入到datatable  
+        /// </summary>  
+        /// <param name="filePath">excel路径</param>  
+        /// <param name="isColumnName">第一行是否是列名</param>  
+        /// <returns>返回datatable</returns>  
+        public static DataTable ExcelToDataTable(string filePath, bool isColumnName)
+        {
+            DataTable dataTable = null;
+            FileStream fs = null;
+            DataColumn column = null;
+            DataRow dataRow = null;
+            IWorkbook workbook = null;
+            ISheet sheet = null;
+            IRow row = null;
+            ICell cell = null;
+            int startRow = 0;
+            try
+            {
+                using (fs = File.OpenRead(filePath))
+                {
+                    // 2007版本  
+                    if (filePath.IndexOf(".xlsx") > 0)
+                        workbook = new XSSFWorkbook(fs);
+                    // 2003版本  
+                    else if (filePath.IndexOf(".xls") > 0)
+                        workbook = new HSSFWorkbook(fs);
+
+                    if (workbook != null)
+                    {
+                        sheet = workbook.GetSheetAt(0);//读取第一个sheet，当然也可以循环读取每个sheet  
+                        dataTable = new DataTable();
+                        if (sheet != null)
+                        {
+                            int rowCount = sheet.LastRowNum;//总行数  
+                            if (rowCount > 0)
+                            {
+                                IRow firstRow = sheet.GetRow(0);//第一行  
+                                int cellCount = firstRow.LastCellNum;//列数  
+
+                                //构建datatable的列  
+                                if (isColumnName)
+                                {
+                                    startRow = 1;//如果第一行是列名，则从第二行开始读取  
+                                    for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
+                                    {
+                                        cell = firstRow.GetCell(i);
+                                        if (cell != null)
+                                        {
+                                            if (cell.StringCellValue != null)
+                                            {
+                                                column = new DataColumn(cell.StringCellValue);
+                                                dataTable.Columns.Add(column);
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = firstRow.FirstCellNum; i < cellCount; ++i)
+                                    {
+                                        column = new DataColumn("column" + (i + 1));
+                                        dataTable.Columns.Add(column);
+                                    }
+                                }
+
+                                //填充行  
+                                for (int i = startRow; i <= rowCount; ++i)
+                                {
+                                    row = sheet.GetRow(i);
+                                    if (row == null) continue;
+
+                                    dataRow = dataTable.NewRow();
+                                    for (int j = row.FirstCellNum; j < cellCount; ++j)
+                                    {
+                                        cell = row.GetCell(j);
+                                        if (cell == null)
+                                        {
+                                            dataRow[j] = "";
+                                        }
+                                        else
+                                        {
+                                            //CellType(Unknown = -1,Numeric = 0,String = 1,Formula = 2,Blank = 3,Boolean = 4,Error = 5,)  
+                                            switch (cell.CellType)
+                                            {
+                                                case CellType.Blank:
+                                                    dataRow[j] = "";
+                                                    break;
+                                                case CellType.Numeric:
+                                                    short format = cell.CellStyle.DataFormat;
+                                                    //对时间格式（2015.12.5、2015/12/5、2015-12-5等）的处理  
+                                                    if (format == 14 || format == 31 || format == 57 || format == 58)
+                                                        dataRow[j] = cell.DateCellValue;
+                                                    else
+                                                        dataRow[j] = cell.NumericCellValue;
+                                                    break;
+                                                case CellType.String:
+                                                default:
+                                                    dataRow[j] = cell.StringCellValue;
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    dataTable.Rows.Add(dataRow);
+                                }
+                            }
+                        }
+                    }
+                }
+                return dataTable;
+            }
+            catch (Exception)
+            {
+                if (fs != null)
+                {
+                    fs.Close();
+                }
+                return null;
+            }
+        }
+
 
         private void ExcelInputForm_Load(object sender, EventArgs e)
         {
@@ -445,12 +573,12 @@ namespace WindowsFormsApp
 
         private void btnDownload_Click(object sender, EventArgs e)
         {
-             
+
             var newBook = BuildWorkbook(exportDataTable);
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 Filter = "Files|*.xlsx",              // 设定打开的文件类型
-                                                            //openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;                       // 打开app对应的路径
+                                                      //openFileDialog.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;                       // 打开app对应的路径
                 InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)  // 打开桌面
             };
             string path = "";
@@ -470,8 +598,7 @@ namespace WindowsFormsApp
             }
         }
 
-        private void dataGridView1_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
-        {
-        }
+
     }
 }
+
